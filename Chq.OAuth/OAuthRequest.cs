@@ -62,6 +62,8 @@ namespace Chq.OAuth
 
             if(Context.CallbackUri != null)
                 AuthParameters.Add(OAuthParameters.CALL_BACK, Context.CallbackUri.ToString());
+            else if (Context.IsOutOfBand)
+                AuthParameters.Add(OAuthParameters.CALL_BACK, "oob"); //special callback uri for non web applications
             
             AuthParameters.Add(OAuthParameters.CONSUMER_KEY, Context.ConsumerToken.Token);
             AuthParameters.Add(OAuthParameters.VERSION, "1.0");
