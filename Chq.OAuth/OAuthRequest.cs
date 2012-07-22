@@ -261,48 +261,57 @@ namespace Chq.OAuth
             return ExecuteRequestInternal().AsAsyncOperation();
         }
 
-        private async Task<string> ExecuteRequestInternal()
+        private Task<string> ExecuteRequestInternal()
         {
-            HttpWebRequest Request;
-            String SigBaseStringParams = "";
+            return Task.Run(() =>
+                                {
+                                    HttpWebRequest Request;
+                                    String SigBaseStringParams = "";
 
-            foreach (var item in QueryParameters)
-            {
-                if (SigBaseStringParams != "") SigBaseStringParams += "&";
-                SigBaseStringParams += item.Key + "=" + OAuthEncoding.Encode(item.Value);
-            }
+                                    foreach (var item in QueryParameters)
+                                    {
+                                        if (SigBaseStringParams != "") SigBaseStringParams += "&";
+                                        SigBaseStringParams += item.Key + "=" + OAuthEncoding.Encode(item.Value);
+                                    }
 
-            Request = (HttpWebRequest)WebRequest.Create(Url + (String.IsNullOrEmpty(SigBaseStringParams) ? "" : "?" + SigBaseStringParams));
-            Request.Method = Method.ToUpper();
+                                    Request =
+                                        (HttpWebRequest)
+                                        WebRequest.Create(Url +
+                                                          (String.IsNullOrEmpty(SigBaseStringParams)
+                                                               ? ""
+                                                               : "?" + SigBaseStringParams));
+                                    Request.Method = Method.ToUpper();
 
 
-            if (Method != "GET")
-            {
-                if (!String.IsNullOrEmpty(ContentType)) Request.ContentType = ContentType;
+                                    if (Method != "GET")
+                                    {
+                                        if (!String.IsNullOrEmpty(ContentType)) Request.ContentType = ContentType;
 
-                if (Data != null)
-                {
-                    using (var stream = await Request.GetRequestStreamAsync())
-                    {
-                        var bytes = Encoding.UTF8.GetBytes(Data);
-                        stream.Write(bytes, 0, bytes.Length);
-                    }
-                }
-            }
+                                        if (Data != null)
+                                        {
+                                            using (var stream = Request.GetRequestStreamAsync().Result)
+                                            {
+                                                var bytes = Encoding.UTF8.GetBytes(Data);
+                                                stream.Write(bytes, 0, bytes.Length);
+                                            }
+                                        }
+                                    }
 
-            String authHeader = "OAuth";
-            var orderedParameters = AuthParameters.OrderBy(d => d.Key);
-            foreach (var item in orderedParameters)
-            {
-                authHeader += (item.Key != orderedParameters.First().Key ? ", " : " ") + item.Key + "=\"" + OAuthEncoding.Encode(item.Value) + "\"";
-            }
+                                    String authHeader = "OAuth";
+                                    var orderedParameters = AuthParameters.OrderBy(d => d.Key);
+                                    foreach (var item in orderedParameters)
+                                    {
+                                        authHeader += (item.Key != orderedParameters.First().Key ? ", " : " ") +
+                                                      item.Key + "=\"" + OAuthEncoding.Encode(item.Value) + "\"";
+                                    }
 
-            Request.Headers["Authorization"] = authHeader;
+                                    Request.Headers["Authorization"] = authHeader;
 
-            HttpWebResponse Response = (HttpWebResponse)await Request.GetResponseAsync();
-            StreamReader ResponseDataStream = new StreamReader(Response.GetResponseStream());
+                                    HttpWebResponse Response = (HttpWebResponse) Request.GetResponseAsync().Result;
+                                    StreamReader ResponseDataStream = new StreamReader(Response.GetResponseStream());
 
-            return ResponseDataStream.ReadToEnd();
+                                    return ResponseDataStream.ReadToEnd();
+                                });
         }
 #else
         public Task<String> ExecuteRequest()
